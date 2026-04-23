@@ -33,39 +33,24 @@ export async function POST(request) {
             },
             {
               type: 'text',
-              text: `You are a real estate expert. Analyze this document and identify all material facts that would affect a buyer's decision or property value.
-
-Return ONLY valid JSON with no markdown, no backticks, no extra text. Use this exact structure:
-{
-  "documentType": "HOA Document or Inspection Report or Seller Disclosure or Other",
-  "risks": [
-    {
-      "category": "category name",
-      "severity": "high or medium or low",
-      "description": "what the issue is and why it matters",
-      "recommendation": "what to do about it"
-    }
-  ],
-  "summary": "2-3 sentence summary of the most important findings"
-}`,
+              text: `You are a real estate expert. Analyze this document and identify all material facts that would affect a buyer's decision or property value. Return ONLY a raw JSON object with no markdown formatting, no backticks, no extra text. Use exactly this structure: {"documentType":"HOA Document or Inspection Report or Seller Disclosure or Other","risks":[{"category":"category name","severity":"high or medium or low","description":"what the issue is and why it matters","recommendation":"what to do about it"}],"summary":"2-3 sentence summary of the most important findings"}`,
             },
           ],
         },
       ],
     });
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
-
+    const text = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
+    
     let analysis;
     try {
-      analysis = JSON.parse(text);
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      analysis = JSON.parse(jsonMatch ? jsonMatch[0] : text);
     } catch {
       analysis = { documentType: 'Unknown', risks: [], summary: text };
     }
 
     return Response.json({ success: true, analysis });
   } catch (error) {
-    console.error('Error:', error);
-    return Response.json({ error: 'Failed to analyze document' }, { status: 500 });
-  }
-}
+    console.error('Error:', error.message);
+    return Response.json({ error: error.message || 'Failed to
