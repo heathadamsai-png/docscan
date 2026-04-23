@@ -1,58 +1,46 @@
-import Anthropic from '@anthropic-ai/sdk';
+const ANALYSIS_PROMPT = `You are an experienced California real estate agent and transaction coordinator. Your job is to analyze real estate documents and identify material facts that affect a buyer's decision or property value.
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+IMPORTANT - IGNORE these document types entirely, they contain no material property-specific information:
+- State-required advisories (Statewide Buyer and Seller Advisory, SBSA)
+- Agency disclosure forms
+- Boilerplate disclosure booklets
+- Natural Hazard Disclosure reports (standard zone disclosures only)
+- Standard lead paint advisories
+- Megan's Law disclosures
+- Market conditions advisories
+- Wire fraud advisories
+- Any form that is entirely pre-printed with no seller-filled fields
 
-export async function POST(request) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get('file');
+FOCUS ONLY on documents where a seller, agent, or inspector has filled in property-specific information:
+- Transfer Disclosure Statement (TDS) - seller filled sections
+- Seller Property Questionnaire (SPQ) - seller answers
+- HOA documents (CC&Rs, financials, meeting minutes, special assessments, litigation)
+- Home inspection reports (inspector findings)
+- Pest/termite inspection reports
+- Roof inspection reports
+- Pool/spa inspection reports
+- Sewer inspection reports
+- Title reports (liens, easements, encumbrances)
+- Permits and unpermitted work disclosures
+- Any document with handwritten or typed seller responses
 
-    if (!file) {
-      return Response.json({ error: 'No file provided' }, { status: 400 });
+For each material issue found, assess:
+1. Does this affect property value?
+2. Does this require repair or further investigation?
+3. Is this a deal-breaker or negotiation point?
+4. Is this a legal liability for the buyer?
+
+Return ONLY a raw JSON object with no markdown, no backticks, no extra text:
+{
+  "documentType": "type of document",
+  "documentsIgnored": ["list any boilerplate docs you skipped"],
+  "risks": [
+    {
+      "category": "category name",
+      "severity": "high or medium or low",
+      "description": "specific finding with exact details from the document",
+      "recommendation": "what the buyer or agent should do"
     }
-
-    const bytes = await file.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString('base64');
-
-    const response = await client.messages.create({
-      model: 'claude-opus-4-5',
-      max_tokens: 2000,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'document',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: base64,
-              },
-            },
-            {
-              type: 'text',
-              text: 'You are a real estate expert. Analyze this document and identify all material facts that would affect a buyers decision or property value. Return ONLY a raw JSON object with no markdown, no backticks, no extra text. Use this structure: {"documentType":"HOA Document or Inspection Report or Seller Disclosure or Other","risks":[{"category":"name","severity":"high or medium or low","description":"what the issue is","recommendation":"what to do"}],"summary":"2-3 sentence summary"}',
-            },
-          ],
-        },
-      ],
-    });
-
-    const text = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
-
-    let analysis;
-    try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      analysis = JSON.parse(jsonMatch ? jsonMatch[0] : text);
-    } catch (e) {
-      analysis = { documentType: 'Unknown', risks: [], summary: text };
-    }
-
-    return Response.json({ success: true, analysis });
-  } catch (error) {
-    console.error('Error:', error.message);
-    return Response.json({ error: error.message }, { status: 500 });
-  }
-}
+  ],
+  "summary": "2-3 sentence summary of the most important findings for a buyer"
+}`;
