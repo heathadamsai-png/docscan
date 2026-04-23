@@ -1,0 +1,23 @@
+{
+  "name": "docscan",
+  "version": "1.0.0",
+  "description": "Real estate document analysis SaaS for realtors",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@react-oauth/google": "^0.12.1",
+    "@anthropic-ai/sdk": "^0.16.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.50.0",
+    "eslint-config-next": "^14.0.0"
+  }
+}
